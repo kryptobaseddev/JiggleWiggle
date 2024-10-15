@@ -2,7 +2,7 @@ import tkinter as tk
 import time
 from threading import Thread
 from jigglewiggle.jiggler import MouseJiggler
-from jigglewiggle.utils import StopEvent
+from jigglewiggle.utils import StopEvent, SystemSettings
 
 class JigglerApp:
     def __init__(self, app_version, latest_version=None):
@@ -12,6 +12,8 @@ class JigglerApp:
         self.IDLE_TIME_SECONDS = 15
         self.idle_time = 0
         self.stop_event = StopEvent()
+        self.prevent_sleep = False
+        self.prevent_screen_saver = False
 
     def run(self):
         # Create the main window
@@ -31,6 +33,9 @@ class JigglerApp:
         # Add idle time label and timeout settings
         self.add_idle_and_timeout_widgets()
 
+        # Add toggle buttons for controlling screen saver and sleep settings
+        self.add_prevent_sleep_buttons()
+
         # Add toggle button to start/stop jiggling and close button
         self.add_control_buttons()
 
@@ -39,6 +44,9 @@ class JigglerApp:
 
         # Create a MouseJiggler instance
         self.jiggler = MouseJiggler()
+
+        # Start a thread to update the sleep and screen saver status
+        Thread(target=self.update_system_status).start()
 
         # Start the GUI main loop
         self.window.mainloop()
@@ -75,13 +83,30 @@ class JigglerApp:
         self.timeout_button = tk.Button(self.window, text="Set Timeout", command=self.set_timeout)
         self.timeout_button.grid(row=2, column=2, padx=20, pady=10)
 
+    def add_prevent_sleep_buttons(self):
+        """Add buttons to toggle sleep and screen saver prevention."""
+        # Prevent Sleep Button
+        self.prevent_sleep_button = tk.Button(self.window, text="Prevent Sleep: Off", command=self.toggle_prevent_sleep)
+        self.prevent_sleep_button.grid(row=3, column=0, padx=20, pady=10)
+
+        # Prevent Screen Saver Button
+        self.prevent_screen_saver_button = tk.Button(self.window, text="Prevent Screen Saver: Off", command=self.toggle_prevent_screen_saver)
+        self.prevent_screen_saver_button.grid(row=3, column=1, padx=20, pady=10)
+
+        # Labels to indicate current status
+        self.sleep_status_label = tk.Label(self.window, text="Sleep Prevention: Off")
+        self.sleep_status_label.grid(row=4, column=0, padx=20, pady=10)
+
+        self.screen_saver_status_label = tk.Label(self.window, text="Screen Saver Disabled: Off")
+        self.screen_saver_status_label.grid(row=4, column=1, padx=20, pady=10)
+
     def add_control_buttons(self):
         """Add control buttons to start/stop the jiggler and close the application."""
         self.toggle_button = tk.Button(self.window, text="Turn On", command=self.toggle_jiggle)
-        self.toggle_button.grid(row=3, column=0, padx=20, pady=10)
+        self.toggle_button.grid(row=5, column=0, padx=20, pady=10)
 
         self.close_button = tk.Button(self.window, text="Close", command=self.on_closing)
-        self.close_button.grid(row=3, column=1, padx=20, pady=10)
+        self.close_button.grid(row=5, column=1, padx=20, pady=10)
 
     def toggle_jiggle(self):
         """Toggle the mouse jiggling process."""
@@ -103,6 +128,37 @@ class JigglerApp:
             self.timeout_label.config(text=f"Timeout: {self.IDLE_TIME_SECONDS} seconds")
         except ValueError:
             self.timeout_label.config(text="Please enter a valid number.")
+
+    def toggle_prevent_sleep(self):
+        """Toggle the computer's sleep prevention setting."""
+        self.prevent_sleep = not self.prevent_sleep
+        if self.prevent_sleep:
+            SystemSettings.prevent_sleep()
+            self.prevent_sleep_button.config(text="Prevent Sleep: On")
+        else:
+            SystemSettings.allow_sleep()
+            self.prevent_sleep_button.config(text="Prevent Sleep: Off")
+
+    def toggle_prevent_screen_saver(self):
+        """Toggle the computer's screen saver prevention setting."""
+        self.prevent_screen_saver = not self.prevent_screen_saver
+        if self.prevent_screen_saver:
+            SystemSettings.disable_screen_saver()
+            self.prevent_screen_saver_button.config(text="Prevent Screen Saver: On")
+        else:
+            SystemSettings.enable_screen_saver()
+            self.prevent_screen_saver_button.config(text="Prevent Screen Saver: Off")
+
+    def update_system_status(self):
+        """Update the system settings status periodically."""
+        while True:
+            sleep_status = "On" if SystemSettings.is_sleep_prevented() else "Off"
+            self.sleep_status_label.config(text=f"Sleep Prevention: {sleep_status}")
+
+            screen_saver_status = "On" if SystemSettings.is_screen_saver_disabled() else "Off"
+            self.screen_saver_status_label.config(text=f"Screen Saver Disabled: {screen_saver_status}")
+
+            time.sleep(5)  # Update every 5 seconds
 
     def jiggle_mouse(self):
         """Jiggle the mouse if idle time exceeds the threshold."""
