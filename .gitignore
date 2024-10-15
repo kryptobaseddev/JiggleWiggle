@@ -1,0 +1,12 @@
+# Python-related files
+__pycache__/
+*.py[cod]
+venv/
+
+# Environment files
+.env
+
+# PyInstaller-related files
+/dist/
+/build/
+*.spec
