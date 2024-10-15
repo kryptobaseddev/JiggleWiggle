@@ -9,4 +9,3 @@ venv/
 # PyInstaller-related files
 /dist/
 /build/
-*.spec
